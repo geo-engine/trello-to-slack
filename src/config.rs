@@ -24,6 +24,15 @@ pub enum ActionConfig {
     InactiveCards,
 }
 
+impl std::fmt::Display for ActionConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ActionConfig::PendingReviews => write!(f, "PendingReviews"),
+            ActionConfig::InactiveCards => write!(f, "InactiveCards"),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct UserMapping {
     pub trello_user: TrelloUser,

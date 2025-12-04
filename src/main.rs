@@ -46,6 +46,11 @@ async fn main() -> Result<()> {
 
     let config = config::AppConfig::parse();
 
+    info!(
+        "Starting Trello to Slack notifier with action: {}",
+        config.action
+    );
+
     let trello_to_slack_mapping: HashMap<TrelloUser, SlackUser> = config
         .user_mapping
         .iter()
@@ -61,6 +66,8 @@ async fn main() -> Result<()> {
         members.extend(board_members);
     }
 
+    info!("Fetched {} unique Trello members", members.len());
+
     let trello_member_id_to_username: HashMap<String, TrelloUser> = members
         .into_iter()
         .map(|member| (member.id.clone(), TrelloUser(member.username.clone())))
@@ -72,6 +79,8 @@ async fn main() -> Result<()> {
 
         lists.extend(board_lists);
     }
+
+    info!("Fetched {} lists from boards", lists.len());
 
     let slack_poster = SlackMessagePoster::new(request_client.clone(), &config.slack);
 
@@ -93,6 +102,12 @@ async fn main() -> Result<()> {
             .await
         }
         ActionConfig::InactiveCards => {
+            if config.trello.inactive_cards_lists.is_empty() {
+                error!(
+                    "No inactive cards lists configured, cannot proceed with inactive cards action"
+                );
+                return Ok(());
+            }
             inactive_cards(
                 &trello_client,
                 &slack_poster,
