@@ -1,0 +1,32 @@
+name: Daily Pending Reviews Notification
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 8 * * *" # 9:00 CET (CET is UTC+1, so 8:00 UTC)
+    - cron: "0 12 * * *" # 13:00 CET (CET is UTC+1, so 12:00 UTC)
+
+jobs:
+  run-pending-reviews:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Run pending reviews
+        run: cargo run --release -- pending-reviews
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          TRELLO_KEY: ${{ secrets.TRELLO_KEY }}
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+          USER_MAPPING: ${{ vars.USER_MAPPING }}
+          TRELLO_BOARD_IDS: ${{ vars.TRELLO_BOARD_IDS }}
+          TRELLO_REVIEW_LISTS: ${{ vars.TRELLO_REVIEW_LISTS }}
+          TRELLO_INACTIVE_CARDS_LISTS: ${{ vars.TRELLO_INACTIVE_CARDS_LISTS }}

@@ -1,0 +1,51 @@
+POST https://slack.com/api/oauth.access
+Content-Type: application/json
+
+{
+    "client_id": "{{client_id}}",
+    "client_secret": "{{client_secret}}",
+    "code": "{{code}}",
+    "redirect_uri": "{{redirect_uri}}"
+}
+
+###
+
+GET https://slack.com/api/users.list
+Authorization: Bearer {{$dotenv SLACK_BOT_TOKEN}}
+Content-Type: application/json
+
+###
+
+POST https://slack.com/oauth/v2/authorize
+Content-Type: application/json
+
+{
+    "client_id": "385552093459.731895254385",
+    "scope": "chat:write,incoming-webhook"
+}
+
+###
+
+POST https://slack.com/api/chat.postMessage
+Authorization: Bearer {{$dotenv SLACK_BOT_TOKEN}}
+Content-Type: application/json
+
+{
+    "channel": "UBCKNCR1C",
+    "markdown_text": "Hello from **Geo Engine!** :tada:"
+}
+
+###
+
+GET https://api.trello.com/1/lists/5fce1e1ebb7b5d587c848801/cards?key={{$dotenv TRELLO_KEY}}&token={{$dotenv TRELLO_TOKEN}}&fields=name,idList&actions=updateCard:idList,createCard
+Content-Type: application/json
+Accept: application/json
+
+{
+    "key": "{{$dotenv TRELLO_KEY}}"
+    "token": "{{$dotenv TRELLO_TOKEN}}"
+    "fields": "name,idList",
+    "actions": "updateCard:idList,createCard",
+}
+
+###

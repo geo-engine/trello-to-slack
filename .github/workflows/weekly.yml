@@ -1,0 +1,31 @@
+name: Weekly Inactive Cards Notification
+
+on:
+    workflow_dispatch:
+    schedule:
+        - cron: "0 8 * * 1" # 9:00 CET on Monday (CET is UTC+1, so 8:00 UTC)
+
+jobs:
+    run-inactive-cards:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v3
+
+            - name: Set up Rust
+              uses: actions-rs/toolchain@v1
+              with:
+                  toolchain: stable
+                  override: true
+
+            - name: Run pending reviews
+              run: cargo run --release -- inactive-cards
+              env:
+                  SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+                  TRELLO_KEY: ${{ secrets.TRELLO_KEY }}
+                  TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+                  USER_MAPPING: ${{ vars.USER_MAPPING }}
+                  TRELLO_BOARD_IDS: ${{ vars.TRELLO_BOARD_IDS }}
+                  TRELLO_REVIEW_LISTS: ${{ vars.TRELLO_REVIEW_LISTS }}
+                  TRELLO_INACTIVE_CARDS_LISTS: ${{ vars.TRELLO_INACTIVE_CARDS_LISTS }}
