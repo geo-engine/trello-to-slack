@@ -175,6 +175,7 @@ mod tests {
           ],
           "name": "Prüfen, ob alle E-Mails an weitergeleitet wurden.",
           "dateLastActivity": "+002025-11-21T11:50:59.295000000Z",
+          "url": "https://trello.com/c/WtgfKH5P/2875-prüfen-ob-alle-e-mails-weitergeleitet-wurden",
           "actions": [
             {
               "id": "68ff67ccf6804d2f8e7c5ade",
