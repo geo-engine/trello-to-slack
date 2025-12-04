@@ -16,10 +16,8 @@ jobs:
       - name: Set up Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
-      - name: Run pending reviews
-        run: |
-          cargo build --release
-          ./target/release/trello-to-slack pending-reviews
+      - name: Run inactive cards
+        run: cargo run --release -- inactive-cards
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           TRELLO_KEY: ${{ secrets.TRELLO_KEY }}
