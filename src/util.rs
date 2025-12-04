@@ -1,4 +1,4 @@
-use crate::schema::Action;
+use crate::{config::AppConfig, schema::Action};
 use anyhow::{Context, Result};
 use log::info;
 use std::io::Write;
@@ -30,6 +30,34 @@ pub fn debug_write_to_file<T: serde::Serialize>(
     info!("{title} have been written to {file_path}");
 
     Ok(())
+}
+
+pub fn print_summary(config: &AppConfig) {
+    use tabled::{builder::Builder, settings::Style};
+
+    let mut builder = Builder::with_capacity(5, 2);
+    builder.push_record([
+        "Users",
+        &config
+            .user_mapping
+            .iter()
+            .map(|m| m.trello_user.0.clone())
+            .collect::<Vec<_>>()
+            .join("\n"),
+    ]);
+    builder.push_record(["Trello Boards", &config.trello.board_ids.join("\n")]);
+    builder.push_record(["Review Lists", &config.trello.review_lists.join("\n")]);
+    builder.push_record([
+        "Inactive Cards Lists",
+        &config.trello.inactive_cards_lists.join("\n"),
+    ]);
+    let mut table = builder.build();
+    table.with(Style::modern());
+
+    info!(
+        "Configuration Summary:\n\
+        {table}",
+    );
 }
 
 #[cfg(test)]

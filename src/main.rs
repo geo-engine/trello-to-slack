@@ -1,9 +1,9 @@
 use crate::{
-    config::ActionConfig,
+    config::{ActionConfig, AppConfig},
     schema::List,
     slack::SlackMessagePoster,
     trello::{TrelloClient, last_update_from_card, moved_to_list_date},
-    util::setup_tracing,
+    util::{print_summary, setup_tracing},
 };
 use anyhow::Result;
 use clap::Parser;
@@ -42,7 +42,9 @@ fn main() -> Result<()> {
     setup_tracing();
     dotenvy::dotenv().ok(); // load .env file
 
-    let config = config::AppConfig::parse();
+    let config = AppConfig::parse();
+
+    print_summary(&config);
 
     info!(
         "Starting Trello to Slack notifier with action: {}",
