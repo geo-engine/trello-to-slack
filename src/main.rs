@@ -7,14 +7,13 @@ use crate::{
 };
 use anyhow::Result;
 use clap::Parser;
+use log::{error, info};
 use std::{
     collections::{HashMap, HashSet},
     fmt::{Display, Write},
     hash::Hash,
 };
 use time::OffsetDateTime;
-use tracing::{error, info};
-use url::Url;
 
 mod config;
 mod schema;
@@ -39,8 +38,7 @@ impl Display for SlackUser {
     }
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     setup_tracing();
     dotenvy::dotenv().ok(); // load .env file
 
@@ -57,12 +55,12 @@ async fn main() -> Result<()> {
         .map(|mapping| (mapping.trello_user.clone(), mapping.slack_user.clone()))
         .collect();
 
-    let request_client = reqwest::Client::new();
+    let request_client = reqwest::blocking::Client::new();
     let trello_client = TrelloClient::new(request_client.clone(), &config.trello);
 
     let mut members = HashSet::new();
     for board_id in &config.trello.board_ids {
-        let board_members = trello_client.get_members(board_id).await?;
+        let board_members = trello_client.get_members(board_id)?;
         members.extend(board_members);
     }
 
@@ -75,7 +73,7 @@ async fn main() -> Result<()> {
 
     let mut lists = Vec::new();
     for board in &config.trello.board_ids {
-        let board_lists = trello_client.get_lists(board).await?;
+        let board_lists = trello_client.get_lists(board)?;
 
         lists.extend(board_lists);
     }
@@ -96,10 +94,9 @@ async fn main() -> Result<()> {
                 &trello_to_slack_mapping,
                 &trello_member_id_to_username,
                 lists
-                    .iter()
+                    .into_iter()
                     .filter(|list| config.trello.review_lists.contains(&list.name)),
             )
-            .await
         }
         ActionConfig::InactiveCards => {
             if config.trello.inactive_cards_lists.is_empty() {
@@ -114,24 +111,23 @@ async fn main() -> Result<()> {
                 &trello_to_slack_mapping,
                 &trello_member_id_to_username,
                 lists
-                    .iter()
+                    .into_iter()
                     .filter(|list| config.trello.inactive_cards_lists.contains(&list.name)),
             )
-            .await
         }
     }
 }
 
 /// ACTION: Send notifications for pending reviews
-async fn pending_reviews(
+fn pending_reviews(
     trello_client: &TrelloClient,
     slack_poster: &SlackMessagePoster,
     trello_to_slack_mapping: &HashMap<TrelloUser, SlackUser>,
     trello_member_id_to_username: &HashMap<String, TrelloUser>,
-    target_lists: impl Iterator<Item = &List>,
+    target_lists: impl Iterator<Item = List>,
 ) -> Result<()> {
     let pending_reviews =
-        get_pending_reviews(trello_client, trello_member_id_to_username, target_lists).await?;
+        get_pending_reviews(trello_client, trello_member_id_to_username, target_lists)?;
 
     for (trello_user, pending_reviews) in pending_reviews {
         if pending_reviews.is_empty() {
@@ -150,9 +146,7 @@ async fn pending_reviews(
             "Sending pending reviews notification to Slack user {slack_user} for Trello user {trello_user}"
         );
 
-        slack_poster
-            .post_message(slack_user, &markdown_text)
-            .await?;
+        slack_poster.post_message(slack_user, &markdown_text)?;
     }
 
     Ok(())
@@ -161,21 +155,21 @@ async fn pending_reviews(
 #[derive(Clone, Debug)]
 struct PendingReview {
     card_name: String,
-    card_url: Url,
+    card_url: String,
     pending_since_days: usize,
 }
 
-async fn get_pending_reviews(
+fn get_pending_reviews(
     trello_client: &TrelloClient,
     trello_member_id_to_username: &HashMap<String, TrelloUser>,
-    target_lists: impl Iterator<Item = &List>,
+    target_lists: impl Iterator<Item = List>,
 ) -> Result<HashMap<TrelloUser, Vec<PendingReview>>> {
     let mut pending_reviews = HashMap::<TrelloUser, Vec<PendingReview>>::new();
 
     for list in target_lists {
         info!("Processing list '{}' (ID: {})", list.name, list.id);
 
-        let cards = trello_client.get_cards(&list.id).await?;
+        let cards = trello_client.get_cards(&list.id)?;
 
         for card in &cards {
             let trello_users = card
@@ -259,15 +253,15 @@ fn compose_pending_reviews_message(mut pending_reviews: Vec<PendingReview>) -> R
 const INACTIVE_WEEKS_THRESHOLD: usize = 2;
 
 /// ACTION: Send notifications for inactive cards
-async fn inactive_cards(
+fn inactive_cards(
     trello_client: &TrelloClient,
     slack_poster: &SlackMessagePoster,
     trello_to_slack_mapping: &HashMap<TrelloUser, SlackUser>,
     trello_member_id_to_username: &HashMap<String, TrelloUser>,
-    target_lists: impl Iterator<Item = &List>,
+    target_lists: impl Iterator<Item = List>,
 ) -> Result<()> {
     let inactive_cards =
-        get_inactive_cards(trello_client, trello_member_id_to_username, target_lists).await?;
+        get_inactive_cards(trello_client, trello_member_id_to_username, target_lists)?;
 
     for (trello_user, inactive_cards) in inactive_cards {
         if inactive_cards.is_empty() {
@@ -285,9 +279,7 @@ async fn inactive_cards(
         );
 
         let markdown_text = compose_inactive_cards_message(inactive_cards)?;
-        slack_poster
-            .post_message(slack_user, &markdown_text)
-            .await?;
+        slack_poster.post_message(slack_user, &markdown_text)?;
     }
 
     Ok(())
@@ -296,21 +288,21 @@ async fn inactive_cards(
 #[derive(Clone, Debug)]
 struct InactiveCard {
     card_name: String,
-    card_url: Url,
+    card_url: String,
     pending_since_weeks: usize,
 }
 
-async fn get_inactive_cards(
+fn get_inactive_cards(
     trello_client: &TrelloClient,
     trello_member_id_to_username: &HashMap<String, TrelloUser>,
-    target_lists: impl Iterator<Item = &List>,
+    target_lists: impl Iterator<Item = List>,
 ) -> Result<HashMap<TrelloUser, Vec<InactiveCard>>> {
     let mut inactive_cards = HashMap::<TrelloUser, Vec<InactiveCard>>::new();
 
     for list in target_lists {
         info!("Processing list '{}' (ID: {})", list.name, list.id);
 
-        let cards = trello_client.get_cards(&list.id).await?;
+        let cards = trello_client.get_cards(&list.id)?;
 
         for card in &cards {
             let trello_users = card

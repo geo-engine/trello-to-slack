@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use time::{OffsetDateTime, serde::iso8601};
-use url::Url;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -12,7 +11,7 @@ pub struct Card {
     #[serde(with = "iso8601")]
     pub date_last_activity: OffsetDateTime,
     pub actions: Vec<Action>,
-    pub url: Url,
+    pub url: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

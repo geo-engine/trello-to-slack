@@ -1,23 +1,12 @@
-use std::io::Write;
-
 use crate::schema::Action;
 use anyhow::{Context, Result};
-use tracing::{info, level_filters::LevelFilter};
-use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
+use log::info;
+use std::io::Write;
 
 pub fn setup_tracing() {
-    tracing_subscriber::registry()
-        .with(
-            EnvFilter::builder()
-                .with_default_directive(if cfg!(debug_assertions) {
-                    LevelFilter::DEBUG.into()
-                } else {
-                    LevelFilter::INFO.into()
-                })
-                .from_env_lossy(),
-        )
-        .with(tracing_subscriber::fmt::layer().pretty())
-        .init();
+    let env = env_logger::Env::default().filter_or("LOG_LEVEL", "info");
+
+    env_logger::init_from_env(env);
 }
 
 pub fn is_sorted_descending(actions: &[Action]) -> bool {

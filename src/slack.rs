@@ -2,19 +2,19 @@ use crate::{SlackUser, config::SlackConfig};
 use anyhow::{Result, bail};
 
 pub struct SlackMessagePoster {
-    client: reqwest::Client,
+    client: reqwest::blocking::Client,
     bot_token: String,
 }
 
 impl SlackMessagePoster {
-    pub fn new(client: reqwest::Client, config: &SlackConfig) -> Self {
+    pub fn new(client: reqwest::blocking::Client, config: &SlackConfig) -> Self {
         SlackMessagePoster {
             client,
             bot_token: config.bot_token.clone(),
         }
     }
 
-    pub async fn post_message(&self, slack_user: &SlackUser, message: &str) -> Result<()> {
+    pub fn post_message(&self, slack_user: &SlackUser, message: &str) -> Result<()> {
         let response = self
             .client
             .post("https://slack.com/api/chat.postMessage")
@@ -23,11 +23,10 @@ impl SlackMessagePoster {
                 "channel": slack_user.0,
                 "markdown_text": message
             }))
-            .send()
-            .await?;
+            .send()?;
 
         if !response.status().is_success() {
-            bail!("Failed to send message: {:?}", response.text().await?);
+            bail!("Failed to send message: {:?}", response.text()?);
         }
 
         Ok(())

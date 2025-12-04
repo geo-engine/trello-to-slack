@@ -7,13 +7,13 @@ use anyhow::{Context, Result, bail};
 use reqwest::header::ACCEPT;
 
 pub struct TrelloClient {
-    client: reqwest::Client,
+    client: reqwest::blocking::Client,
     key: String,
     token: String,
 }
 
 impl TrelloClient {
-    pub fn new(client: reqwest::Client, config: &TrelloConfig) -> Self {
+    pub fn new(client: reqwest::blocking::Client, config: &TrelloConfig) -> Self {
         TrelloClient {
             client,
             key: config.key.clone(),
@@ -21,7 +21,7 @@ impl TrelloClient {
         }
     }
 
-    pub async fn get_members(&self, board_id: &str) -> Result<Vec<Member>> {
+    pub fn get_members(&self, board_id: &str) -> Result<Vec<Member>> {
         let response = self
             .client
             .get(format!(
@@ -29,14 +29,13 @@ impl TrelloClient {
             ))
             .query(&[("key", &self.key), ("token", &self.token)])
             .header(ACCEPT, "application/json")
-            .send()
-            .await?;
+            .send()?;
 
         if !response.status().is_success() {
-            bail!("Failed to send message: {:?}", response.text().await?);
+            bail!("Failed to send message: {:?}", response.text()?);
         }
 
-        let json: serde_json::Value = response.json().await?;
+        let json: serde_json::Value = response.json()?;
 
         debug_write_to_file(&json, &format!("debug/members_{board_id}.json"), "Members")?;
 
@@ -45,7 +44,7 @@ impl TrelloClient {
         Ok(members)
     }
 
-    pub async fn get_lists(&self, board_id: &str) -> Result<Vec<List>> {
+    pub fn get_lists(&self, board_id: &str) -> Result<Vec<List>> {
         let response = self
             .client
             .get(format!("https://api.trello.com/1/boards/{board_id}/lists"))
@@ -56,14 +55,13 @@ impl TrelloClient {
                 ("fields", "id,name"),
             ])
             .header(ACCEPT, "application/json")
-            .send()
-            .await?;
+            .send()?;
 
         if !response.status().is_success() {
-            bail!("Failed to send message: {:?}", response.text().await?);
+            bail!("Failed to send message: {:?}", response.text()?);
         }
 
-        let json: serde_json::Value = response.json().await?;
+        let json: serde_json::Value = response.json()?;
 
         debug_write_to_file(&json, &format!("debug/lists_{board_id}.json"), "Boards")?;
 
@@ -72,7 +70,7 @@ impl TrelloClient {
         Ok(lists)
     }
 
-    pub async fn get_cards(&self, list_id: &str) -> Result<Vec<Card>> {
+    pub fn get_cards(&self, list_id: &str) -> Result<Vec<Card>> {
         let response = self
             .client
             .get(format!("https://api.trello.com/1/lists/{list_id}/cards"))
@@ -83,14 +81,13 @@ impl TrelloClient {
                 ("actions", "updateCard:idList,createCard"),
             ])
             .header(ACCEPT, "application/json")
-            .send()
-            .await?;
+            .send()?;
 
         if !response.status().is_success() {
-            bail!("Failed to send message: {:?}", response.text().await?);
+            bail!("Failed to send message: {:?}", response.text()?);
         }
 
-        let json: serde_json::Value = response.json().await?;
+        let json: serde_json::Value = response.json()?;
 
         debug_write_to_file(&json, &format!("debug/cards_{list_id}.json"), "Cards")?;
 
