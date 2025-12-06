@@ -3,8 +3,8 @@ name: Daily Pending Reviews Notification
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 8 * * *" # 9:00 CET (CET is UTC+1, so 8:00 UTC)
-    - cron: "0 12 * * *" # 13:00 CET (CET is UTC+1, so 12:00 UTC)
+    - cron: "0 8 * * 1-5" # 9:00 CET (CET is UTC+1, so 8:00 UTC), Monday to Friday
+    - cron: "0 12 * * 1-5" # 13:00 CET (CET is UTC+1, so 12:00 UTC), Monday to Friday
 
 jobs:
   run-pending-reviews:
